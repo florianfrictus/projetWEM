@@ -34,11 +34,22 @@ services:
       - es-wem-labo01
     ports:
       - 5601:5601
+  sp-wem-labo01:
+    container_name: sp-wem-labo01
+    image: scrapinghub/splash
+    networks:
+      - es-net
+    depends_on:
+      - kb-wem-labo01
+    ports:
+      - 8050:8050
 
 volumes:
   es-wem-labo01-data:
     driver: local
   kb-wem-labo01-data:
+    driver: local
+  sp-wem-labo01-data:
     driver: local
 
 networks:
