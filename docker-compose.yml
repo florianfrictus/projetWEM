@@ -1,0 +1,46 @@
+version: "3.0"
+services:
+  es-wem-labo01:
+    container_name: es-wem-labo01
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - xpack.security.enabled=false
+      - node.name=es-wem-labo01
+      - cluster.name=es-wem-labo01-cluster
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-wem-labo01-data:/usr/share/elasticsearch/data
+      - ./data:/usr/share/elasticsearch/config/data
+    networks:
+      - es-net
+    ports:
+      - 9200:9200
+      - 9300:9300
+  kb-wem-labo01:
+    container_name: kb-wem-labo01
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es-wem-labo01:9200
+    volumes:
+      - kb-wem-labo01-data:/usr/share/elasticsearch/data
+    networks:
+      - es-net
+    depends_on:
+      - es-wem-labo01
+    ports:
+      - 5601:5601
+
+volumes:
+  es-wem-labo01-data:
+    driver: local
+  kb-wem-labo01-data:
+    driver: local
+
+networks:
+  es-net:
+    driver: bridge
