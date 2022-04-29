@@ -1,12 +1,12 @@
 version: "3.0"
 services:
-  es-wem-labo01:
-    container_name: es-wem-labo01
+  es-wem-projet:
+    container_name: es-wem-projet
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     environment:
       - xpack.security.enabled=false
-      - node.name=es-wem-labo01
-      - cluster.name=es-wem-labo01-cluster
+      - node.name=es-wem-projet
+      - cluster.name=es-wem-projet-cluster
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
@@ -14,42 +14,42 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - es-wem-labo01-data:/usr/share/elasticsearch/data
+      - es-wem-projet-data:/usr/share/elasticsearch/data
       - ./data:/usr/share/elasticsearch/config/data
     networks:
       - es-net
     ports:
       - 9200:9200
       - 9300:9300
-  kb-wem-labo01:
-    container_name: kb-wem-labo01
+  kb-wem-projet:
+    container_name: kb-wem-projet
     image: docker.elastic.co/kibana/kibana:7.17.0
     environment:
-      - ELASTICSEARCH_HOSTS=http://es-wem-labo01:9200
+      - ELASTICSEARCH_HOSTS=http://es-wem-projet:9200
     volumes:
-      - kb-wem-labo01-data:/usr/share/elasticsearch/data
+      - kb-wem-projet-data:/usr/share/elasticsearch/data
     networks:
       - es-net
     depends_on:
-      - es-wem-labo01
+      - es-wem-projet
     ports:
       - 5601:5601
-  sp-wem-labo01:
-    container_name: sp-wem-labo01
+  sp-wem-projet:
+    container_name: sp-wem-projet
     image: scrapinghub/splash
     networks:
       - es-net
     depends_on:
-      - kb-wem-labo01
+      - kb-wem-projet
     ports:
       - 8050:8050
 
 volumes:
-  es-wem-labo01-data:
+  es-wem-projet-data:
     driver: local
-  kb-wem-labo01-data:
+  kb-wem-projet-data:
     driver: local
-  sp-wem-labo01-data:
+  sp-wem-projet-data:
     driver: local
 
 networks:
