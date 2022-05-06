@@ -79,6 +79,6 @@ if __name__ == "__main__":
     jvc_crawler = JVCCrawler(driver,N_GAMES)
     jvc_crawler.start_crawl(URL_ALL_GAMES)
 
-    print(f'Crawled data of {jvc_crawler.counter_games} games.')
+    print(f'Crawled data of {jvc_crawler.counter_game} games.')
 
 
