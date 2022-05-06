@@ -24,6 +24,7 @@ services:
   kb-wem-projet:
     container_name: kb-wem-projet
     image: docker.elastic.co/kibana/kibana:7.17.0
+    command: '--disable-private-mode'
     environment:
       - ELASTICSEARCH_HOSTS=http://es-wem-projet:9200
     volumes:
