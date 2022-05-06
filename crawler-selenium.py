@@ -1,11 +1,12 @@
+import re
+import json
+
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from selenium import webdriver
-
 from bs4 import BeautifulSoup as bs
-import json
 
 from elasticsearch_dsl.connections import connections
 
@@ -27,6 +28,8 @@ class JVCCrawler:
 
         game_urls = [a['href'] for a in html.find_all('a',class_='gameTitleLink__196nPy')]
 
+        # take n games to get exactly n_games
+        game_urls = game_urls[:len(game_urls) if self.counter_game + len(game_urls) <= self.n_games else self.n_games - self.counter_game]
         print(game_urls)
         for url in game_urls:
             self.driver.get(f'{JVCCrawler.DOMAIN}{url}')
@@ -56,9 +59,35 @@ class JVCCrawler:
             grade_users = float(grade_users)
         except (ValueError, TypeError):
             grade_users = -1.0
-
+        print(data)
         print(f'{name} | {genres} | {platform} | {release_date} | edit:{grade_editoral} | users:{grade_users}')
         print(synopsis,end='\n\n')
+
+        #TODO: Here create Game for elasticsearch for each platform (might change the attributes for each platform)
+        #TODO: pass the urls for each platforms (urls with comments)
+        #TODO: Change parameters in parse_comments to pass the game in it
+        self.parse_comments('https://www.jeuxvideo.com/jeux/pc/jeu-1056360/avis/')
+
+    def parse_comments(self, url):
+        self.driver.get(url)
+        html = bs(self.driver.page_source.encode('utf-8').strip(), 'lxml')
+        reviews = html.find('div',class_='bloc-avis-tous').find_all('div',class_='bloc-avis')
+
+        for review in reviews:
+            grade = int(re.findall('\d+',review.find(class_='note-avis').text)[0])
+            comment = review.find(class_='txt-avis').text.strip()
+            date = review.find(class_='bloc-date-avis').text.strip()
+            username = review.find(class_='bloc-pseudo-avis').text.strip()
+
+            print(f"{username} | {date} | {grade}")
+            print(comment,end='\n\n\n')
+
+            #TODO: get the game in parameter and : game.add_comment(username, grade, comment, date)
+
+        next_page = html.find('a',class_='pagi-suivant-actif')
+        if next_page:
+            next_page_href = next_page['href']
+            self.parse_comments(f'{JVCCrawler.DOMAIN}{next_page_href}')
 
 def init_elasticsearch():
     connections.create_connection(hosts=['localhost'])
@@ -72,7 +101,7 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), opti
 
 # --- CONSTANTS ---
 URL_ALL_GAMES = f'{JVCCrawler.DOMAIN}/tous-les-jeux/'
-N_GAMES = 30
+N_GAMES = 1
 
 if __name__ == "__main__":
     #init_elasticsearch()
