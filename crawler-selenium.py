@@ -47,7 +47,7 @@ class JVCCrawler:
             self.driver.find_element(by=By.XPATH, value='//script[@type="application/ld+json"]').get_attribute('text'))
         name = data['name']
         genres = data['genre']
-        platform = data["gamePlatform"]
+        # platform = data["gamePlatform"]
         synopsis = html.find('p', class_='gameCharacteristicsMain__synopsis').text
         release_date = html.find('div', class_='gameCharacteristicsMain__releaseDate').text.split(':')[1].strip()
         grade_users = html.find('div', class_='gameCharacteristicsMain__reviewContainer--userOpinion').find('text',
@@ -62,12 +62,12 @@ class JVCCrawler:
         except (ValueError, TypeError):
             grade_users = -1.0
         print(data)
-        print(f'{name} | {genres} | {platform} | {release_date} | edit:{grade_editoral} | users:{grade_users}')
+        print(f'{name} | {genres} | {release_date} | edit:{grade_editoral} | users:{grade_users}')
         print(synopsis, end='\n\n')
 
         # TODO: Here create Game for elasticsearch for each platform (might change the attributes for each platform)
         # TODO: pass the urls for each platforms (urls with comments)
-        # TODO: Change parameters in parse_comments to pass the game in it
+        # TODO: Change parameters in parse_comments to pass the game init
 
         first_comment_url = html.find("div", 'gameCharacteristicsMain__reviewContainer--userOpinion').find("a")["href"]
         self.driver.get(f"{JVCCrawler.DOMAIN}{first_comment_url}")
