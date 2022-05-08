@@ -2,3 +2,6 @@ elasticsearch
 elasticsearch-dsl
 scrapy
 scrapy-splash
+selenium
+bs4
+webdriver_manager
