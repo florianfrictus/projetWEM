@@ -1,3 +1,5 @@
+from datetime import date as dt
+from datetime import timedelta as td
 import re
 import json
 
@@ -15,6 +17,8 @@ from models import Game, Comment
 
 class JVCCrawler:
     DOMAIN = 'https://www.jeuxvideo.com'
+    FRENCH_MONTHS_COMS={'janv.':1,'févr.':2,'mars':3,'avr.':4,'mai':5,'juin':6,'juil.':7,'août':8,'sept.':9,'oct.':10,'nov.':11,'déc.':12}
+    FRENCH_MONTHS_MAIN={'janvier':1,'février':2,'mars':3,'avril':4,'mai':5,'juin':6,'juillet':7,'août':8,'septembre':9,'octobre':10,'novembre':11,'décembre':12}
 
     def __init__(self, driver, n_games) -> None:
         self.driver = driver
@@ -38,7 +42,6 @@ class JVCCrawler:
             self.parse_game(game_html)
 
         if self.counter_game < self.n_games:
-            self.page_counter += 1
             self.start_crawl(f'{JVCCrawler.DOMAIN}/tous-les-jeux/?p={self.page_counter}')
 
     def parse_game(self, html):
@@ -61,45 +64,95 @@ class JVCCrawler:
             grade_users = float(grade_users)
         except (ValueError, TypeError):
             grade_users = -1.0
-        print(data)
-        print(f'{name} | {genres} | {release_date} | edit:{grade_editoral} | users:{grade_users}')
-        print(synopsis, end='\n\n')
 
-        # TODO: Here create Game for elasticsearch for each platform (might change the attributes for each platform)
-        # TODO: pass the urls for each platforms (urls with comments)
-        # TODO: Change parameters in parse_comments to pass the game init
+        #Format release_date
+        date_split = release_date.split(' ')
+        try:
+            release_date =dt(year=int(date_split[2]),month=JVCCrawler.FRENCH_MONTHS_COMS[date_split[1]],day=int(date_split[0]))
+        except (IndexError, KeyError):
+            release_date=None # not valid or haven't released yet
+        
+        #print(data)
+        #print(f'{name} | {genres} | {release_date} | edit:{grade_editoral} | users:{grade_users}')
+        #print(synopsis, end='\n\n')
 
-        first_comment_url = html.find("div", 'gameCharacteristicsMain__reviewContainer--userOpinion').find("a")["href"]
-        self.driver.get(f"{JVCCrawler.DOMAIN}{first_comment_url}")
-        comment_html = bs(self.driver.page_source.encode('utf-8').strip(), 'lxml')
-        comments_url = [link["href"] for link in comment_html.find_all("a", 'gameHeaderBanner__platformLink')]
-        self.parse_comments(first_comment_url, firsturl=True)
-        for comment_url in comments_url:
-            self.parse_comments(f"{JVCCrawler.DOMAIN}{comment_url}")
+        if release_date:
+            self.page_counter += 1
 
-    def parse_comments(self, url, firsturl=False):
+            first_comment_url = html.find("div", 'gameCharacteristicsMain__reviewContainer--userOpinion').find("a")["href"]
+            self.driver.get(f"{JVCCrawler.DOMAIN}{first_comment_url}")
+            comment_html = bs(self.driver.page_source.encode('utf-8').strip(), 'lxml')
+            comments_url = [link["href"] for link in comment_html.find_all("a", 'gameHeaderBanner__platformLink')]
+
+            game = self.__create_game(name,grade_editoral,grade_users,release_date,synopsis,genres)
+            self.parse_comments(game,first_comment_url, firsturl=True)
+
+            for comment_url in comments_url:
+                game = self.__create_game(name,grade_editoral,grade_users,release_date,synopsis,genres)
+                self.parse_comments(game,f"{JVCCrawler.DOMAIN}{comment_url}")
+
+    def parse_comments(self,game, url, firsturl=False):
         if not firsturl:
-            print(url)
+            #print(url)
             self.driver.get(url)
-        html = bs(self.driver.page_source.encode('utf-8').strip(), 'lxml')
-        reviews = html.find('div', class_='bloc-avis-tous').find_all('div', class_='bloc-avis')
+        save_game=True
+        data = json.loads(self.driver.find_element(by=By.XPATH, value='//script[@type="application/ld+json"]').get_attribute('text'))
+        
+        try:
+            game.platform = data['itemReviewed']['gamePlatform']
+        except KeyError:
+            save_game=False
+        
+        if save_game:
+            html = bs(self.driver.page_source.encode('utf-8').strip(), 'lxml')
+            reviews = html.find('div', class_='bloc-avis-tous').find_all('div', class_='bloc-avis')
 
-        for review in reviews:
-            grade = int(re.findall('\d+', review.find(class_='note-avis').text)[0])
-            comment = review.find(class_='txt-avis').text.strip()
-            date = review.find(class_='bloc-date-avis').text.strip()
-            username = review.find(class_='bloc-pseudo-avis').text.strip()
+            for review in reviews:
+                grade = int(re.findall('\d+', review.find(class_='note-avis').text)[0])
+                comment = review.find(class_='txt-avis').text.strip()
+                date = review.find(class_='bloc-date-avis').text.strip()
+                username = review.find(class_='bloc-pseudo-avis').text.strip()
 
-            print(f"{username} | {date} | {grade}")
-            print(comment, end='\n\n\n')
+                # Date format
+                res_today = re.findall('il y a',date)
+                res_yesterday = re.findall('hier',date)
+                current_date = dt.today()
+                if len(res_today)>0:
+                    date = current_date
+                elif len(res_yesterday)>0:
+                    yesterday = current_date - td(days=1)
+                    date = yesterday
+                else:
+                    date_split = date.split(' ')
+                    try:
+                        year = int(date_split[4])
+                    except ValueError:
+                        year = current_date.year # if it can't cast in int there's to year displayed and it's the current one
+                    
+                    date = dt(year=year,month=JVCCrawler.FRENCH_MONTHS_COMS[date_split[3]],day=int(date_split[2]))
 
-            # TODO: get the game in parameter and : game.add_comment(username, grade, comment, date)
+                #print(f"{username} | {date} | {grade}")
+                #print(comment, end='\n\n\n')
+                game.add_comment(username, grade, comment, date)#TODO: parse date
 
-        next_page = html.find('a', class_='pagi-suivant-actif')
-        if next_page:
-            next_page_href = next_page['href']
-            self.parse_comments(f'{JVCCrawler.DOMAIN}{next_page_href}')
+            next_page = html.find('a', class_='pagi-suivant-actif')
+            if next_page:
+                next_page_href = next_page['href']
+                self.parse_comments(game,f'{JVCCrawler.DOMAIN}{next_page_href}')
+            else:
+                print(f'Game {game.name}|{game.platform} saved (with {len(game.comments)} comments).')
+                game.save()
+        
 
+    def __create_game(self,name,grade_editoral,grade_users,release_date,synopsis,genres) -> Game:
+        game = Game()
+        game.name=name
+        game.editorial_grade = grade_editoral
+        game.users_grade = grade_users
+        game.release_date = release_date
+        game.synopsis = synopsis
+        game.genres=genres
+        return game
 
 def init_elasticsearch():
     connections.create_connection(hosts=['localhost'])
@@ -114,10 +167,10 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), opti
 
 # --- CONSTANTS ---
 URL_ALL_GAMES = f'{JVCCrawler.DOMAIN}/tous-les-jeux/'
-N_GAMES = 1
+N_GAMES = 10
 
 if __name__ == "__main__":
-    # init_elasticsearch()
+    init_elasticsearch()
     jvc_crawler = JVCCrawler(driver, N_GAMES)
     jvc_crawler.start_crawl(URL_ALL_GAMES)
 
