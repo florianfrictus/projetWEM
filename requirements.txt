@@ -9,3 +9,4 @@ pandas
 numpy
 streamlit
 streamlit-aggrid
+plotly
