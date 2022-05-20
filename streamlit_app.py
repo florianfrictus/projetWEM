@@ -7,7 +7,7 @@ from st_aggrid import AgGrid
 from tools.read import get_data
 
 import plotly.express as px
-
+import plotly.graph_objects as go
 # Main page:
 # Number of games
 # Number of comments
@@ -85,18 +85,48 @@ def game_page():
     with col4:
         st.write(f"**Genres**: {' | '.join(genres)}")
 
-    cols_size = [3] + [1] + [1]*len(platforms)
-    cols_grades = st.columns(cols_size)
-    with cols_grades[0]:
-        st.write(f"**Editorial Grade**:{game_df.iloc[0]['editorial_grade']}")
-    with cols_grades[1]:
-        st.write("**Users grade**:")
+    
+    st.write(f"**Editorial Grade**:{game_df.iloc[0]['editorial_grade']}")
+    st.write("**Users grade**:")
 
-    for platform, col in zip(platforms,cols_grades[2:]):
+    cols_size = [1]*len(platforms)
+    cols_grades = st.columns(cols_size)
+    for platform, col in zip(platforms,cols_grades):
         comments_platform = game_df[game_df['platform']==platform].iloc[0]['comments']
         grade_platform = sum([comment['grade'][0] for comment in comments_platform])/len(comments_platform)
+
+        comments_platform = pd.DataFrame([{'date':comment['date'][0],'grade':comment['grade'][0],'comment':comment['comment'][0],'username':comment['username'][0]} for comment in comments_platform])
+        #print(comments_platform['grade'])
+        n_comments_0to5 = comments_platform['grade'].between(left=0,right=5).sum()
+        n_comments_6to10 = comments_platform['grade'].between(left=6,right=15).sum()
+        n_comments_11to15 = comments_platform['grade'].between(left=11,right=15).sum()
+        n_comments_16to20 = comments_platform['grade'].between(left=16,right=20).sum()
+
+        df_grades_range = pd.DataFrame({'n_comments':[n_comments_0to5,n_comments_6to10,n_comments_11to15,n_comments_16to20],'label':['0 to 5','6 to 10','11 to 15','16 to 20'],'color':['red','yellow','yellowgreen','green']})
+        # fig_grades_range = px.bar(df_grades_range,x='n_comments',y='label',text_auto=True)
+        fig_grades_range = go.Figure(data=[go.Bar(
+            y=df_grades_range['label'],
+            x=df_grades_range['n_comments'],
+            marker_color=df_grades_range['color'],
+            orientation='h',
+            text=df_grades_range['n_comments'],
+            textposition='inside'
+            )])
+
+        fig_grades_range.update_layout(
+            yaxis_title='',
+            yaxis_visible=True, 
+            yaxis_showticklabels=True,
+            xaxis_visible=False, 
+            xaxis_showticklabels=False,
+            margin=dict(l=5, r=5, b=5),
+            title=f"{platform}: {grade_platform:.2f}",
+            title_x=0.5,
+            height=200)
+
         with col:
-           st.write(f"{platform}: {grade_platform:.2f}")
+           st.plotly_chart(fig_grades_range,use_container_width=True,config= dict(displayModeBar = False))
+
 
     st.write("**Synopsis**:")
     st.write(game_df.iloc[0]['synopsis'])
