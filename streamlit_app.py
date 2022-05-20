@@ -91,11 +91,15 @@ def game_page():
 
     cols_size = [1]*len(platforms)
     cols_grades = st.columns(cols_size)
+
+    df_platforms_comments = {}
     for platform, col in zip(platforms,cols_grades):
         comments_platform = game_df[game_df['platform']==platform].iloc[0]['comments']
         grade_platform = sum([comment['grade'][0] for comment in comments_platform])/len(comments_platform)
 
         comments_platform = pd.DataFrame([{'date':comment['date'][0],'grade':comment['grade'][0],'comment':comment['comment'][0],'username':comment['username'][0]} for comment in comments_platform])
+        comments_platform['date'] =pd.to_datetime(comments_platform['date'])
+        df_platforms_comments[platform] = comments_platform
         #print(comments_platform['grade'])
         n_comments_0to5 = comments_platform['grade'].between(left=0,right=5).sum()
         n_comments_6to10 = comments_platform['grade'].between(left=6,right=15).sum()
@@ -140,13 +144,24 @@ def game_page():
     df_comments = pd.DataFrame(comments)
     df_comments['date'] =pd.to_datetime(df_comments['date'])
 
-    date_comments_bymonth = df_comments.resample('D', on='date')['username'].count().reset_index().rename(columns={'username':'count'})
-    date_comments_bymonth['date'] = date_comments_bymonth['date'].dt.strftime('%d %b %Y')
+    date_comments_byday = df_comments.resample('D', on='date')['username'].count().reset_index().rename(columns={'username':'count'})
+    date_comments_byday['date'] = date_comments_byday['date'].dt.strftime('%d %b %Y')
     
-    fig_bymonth = px.bar(date_comments_bymonth,x='date',y='count')
+    fig_byday = px.bar(date_comments_byday,x='date',y='count')
     st.subheader('Number of comments per day')
-    st.plotly_chart(fig_bymonth,use_container_width=True)
+    st.plotly_chart(fig_byday,use_container_width=True)
 
+    fig_mean_time = go.Figure()
+
+    average_per_days = 4
+
+    for platform, comments in df_platforms_comments.items():
+        date_comments_byday_mean = comments.resample(f'{average_per_days}D', on='date')['grade'].mean().reset_index().rename(columns={'grade':'mean'})
+        date_comments_byday_mean['mean']=date_comments_byday_mean['mean'].fillna(method='ffill')
+        fig_mean_time.add_trace(go.Scatter(x=date_comments_byday_mean['date'],y=date_comments_byday_mean['mean'],mode='lines',name=platform))
+
+    st.subheader(f'Average grades every {average_per_days} days per platform')
+    st.plotly_chart(fig_mean_time,use_container_width=True)
 
     AgGrid(game_df)
 
