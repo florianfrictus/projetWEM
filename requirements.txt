@@ -12,3 +12,4 @@ streamlit-aggrid
 scikit-learn
 tqdm
 spacy
+plotly
