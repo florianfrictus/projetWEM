@@ -9,3 +9,6 @@ pandas
 numpy
 streamlit
 streamlit-aggrid
+scikit-learn
+tqdm
+spacy
