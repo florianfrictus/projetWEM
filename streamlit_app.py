@@ -8,27 +8,10 @@ from tools.read import get_data
 
 import plotly.express as px
 import plotly.graph_objects as go
-# Main page:
-# Number of games
-# Number of comments
-# Number of games per platform
-# Number of games per genre
-# Number of games by release_date (per month for example)
-
-# Games (one by one):
-# Number of comments
-# Global info of the game (platform, release date, genre)
-# Number of comments per platform
-# Number of comments per release_date (with bins)
-
-
-# Comments:
-
 
 DEFAULT_GAME='Elden Ring'
 
-
-def main_page():
+def main_page(df):
     st.title('Global statistics')
 
     col1, col2 = st.columns(2)
@@ -62,7 +45,7 @@ def main_page():
 
 
 
-def game_page():
+def game_page(df):
     with st.sidebar:
         unique_games = np.unique(df['name'])
         game = st.selectbox('Select the games',unique_games,index=int(np.where(unique_games==DEFAULT_GAME)[0][0]))
@@ -92,80 +75,88 @@ def game_page():
     cols_size = [1]*len(platforms)
     cols_grades = st.columns(cols_size)
 
+    with_comments = True
+
     df_platforms_comments = {}
     for platform, col in zip(platforms,cols_grades):
         comments_platform = game_df[game_df['platform']==platform].iloc[0]['comments']
         grade_platform = sum([comment['grade'][0] for comment in comments_platform])/len(comments_platform)
+        try:
+            comments_platform = pd.DataFrame([{'date':comment['date'][0],'grade':comment['grade'][0],'comment':comment['comment'][0],'username':comment['username'][0]} for comment in comments_platform])
+        except KeyError:
+            with_comments = False
+        
+        if with_comments:
+            comments_platform['date'] =pd.to_datetime(comments_platform['date'])
+            df_platforms_comments[platform] = comments_platform
+            #print(comments_platform['grade'])
+            n_comments_0to5 = comments_platform['grade'].between(left=0,right=5).sum()
+            n_comments_6to10 = comments_platform['grade'].between(left=6,right=10).sum()
+            n_comments_11to15 = comments_platform['grade'].between(left=11,right=15).sum()
+            n_comments_16to20 = comments_platform['grade'].between(left=16,right=20).sum()
 
-        comments_platform = pd.DataFrame([{'date':comment['date'][0],'grade':comment['grade'][0],'comment':comment['comment'][0],'username':comment['username'][0]} for comment in comments_platform])
-        comments_platform['date'] =pd.to_datetime(comments_platform['date'])
-        df_platforms_comments[platform] = comments_platform
-        #print(comments_platform['grade'])
-        n_comments_0to5 = comments_platform['grade'].between(left=0,right=5).sum()
-        n_comments_6to10 = comments_platform['grade'].between(left=6,right=15).sum()
-        n_comments_11to15 = comments_platform['grade'].between(left=11,right=15).sum()
-        n_comments_16to20 = comments_platform['grade'].between(left=16,right=20).sum()
+            df_grades_range = pd.DataFrame({'n_comments':[n_comments_0to5,n_comments_6to10,n_comments_11to15,n_comments_16to20],'label':['0 to 5','6 to 10','11 to 15','16 to 20'],'color':['red','yellow','yellowgreen','green']})
+            # fig_grades_range = px.bar(df_grades_range,x='n_comments',y='label',text_auto=True)
+            fig_grades_range = go.Figure(data=[go.Bar(
+                y=df_grades_range['label'],
+                x=df_grades_range['n_comments'],
+                marker_color=df_grades_range['color'],
+                orientation='h',
+                text=df_grades_range['n_comments'],
+                textposition='inside'
+                )])
 
-        df_grades_range = pd.DataFrame({'n_comments':[n_comments_0to5,n_comments_6to10,n_comments_11to15,n_comments_16to20],'label':['0 to 5','6 to 10','11 to 15','16 to 20'],'color':['red','yellow','yellowgreen','green']})
-        # fig_grades_range = px.bar(df_grades_range,x='n_comments',y='label',text_auto=True)
-        fig_grades_range = go.Figure(data=[go.Bar(
-            y=df_grades_range['label'],
-            x=df_grades_range['n_comments'],
-            marker_color=df_grades_range['color'],
-            orientation='h',
-            text=df_grades_range['n_comments'],
-            textposition='inside'
-            )])
+            fig_grades_range.update_layout(
+                yaxis_title='',
+                yaxis_visible=True, 
+                yaxis_showticklabels=True,
+                xaxis_visible=False, 
+                xaxis_showticklabels=False,
+                margin=dict(l=5, r=5, b=5),
+                title=f"{platform}: {grade_platform:.2f}",
+                title_x=0.5,
+                height=200)
 
-        fig_grades_range.update_layout(
-            yaxis_title='',
-            yaxis_visible=True, 
-            yaxis_showticklabels=True,
-            xaxis_visible=False, 
-            xaxis_showticklabels=False,
-            margin=dict(l=5, r=5, b=5),
-            title=f"{platform}: {grade_platform:.2f}",
-            title_x=0.5,
-            height=200)
-
-        with col:
-           st.plotly_chart(fig_grades_range,use_container_width=True,config= dict(displayModeBar = False))
+            with col:
+                st.plotly_chart(fig_grades_range,use_container_width=True,config= dict(displayModeBar = False))
 
 
     st.write("**Synopsis**:")
     st.write(game_df.iloc[0]['synopsis'])
 
-    st.subheader('Number of comments per platform')
-    fig_comments_byplatform = px.bar(game_df.sort_values('n_comments'),x='platform',y='n_comments')
-    st.plotly_chart(fig_comments_byplatform,use_container_width=True)
-
-
-    comments = [{'date':comment['date'][0],'grade':comment['grade'][0],'comment':comment['comment'][0],'username':comment['username'][0]} for comments in game_df['comments'] for comment in comments]
-    df_comments = pd.DataFrame(comments)
-    df_comments['date'] =pd.to_datetime(df_comments['date'])
-
-    date_comments_byday = df_comments.resample('D', on='date')['username'].count().reset_index().rename(columns={'username':'count'})
-    date_comments_byday['date'] = date_comments_byday['date'].dt.strftime('%d %b %Y')
+    if with_comments:
+        st.subheader('Number of comments per platform')
+        fig_comments_byplatform = px.bar(game_df.sort_values('n_comments'),x='platform',y='n_comments')
+        st.plotly_chart(fig_comments_byplatform,use_container_width=True)
     
-    fig_byday = px.bar(date_comments_byday,x='date',y='count')
-    st.subheader('Number of comments per day')
-    st.plotly_chart(fig_byday,use_container_width=True)
+        comments = [{'date':comment['date'][0],'grade':comment['grade'][0],'comment':comment['comment'][0],'username':comment['username'][0]} for comments in game_df['comments'] for comment in comments]
+        df_comments = pd.DataFrame(comments)
+        #print(df_comments)
+        df_comments['date'] =pd.to_datetime(df_comments['date'])
 
-    fig_mean_time = go.Figure()
+        date_comments_byday = df_comments.resample('D', on='date')['username'].count().reset_index().rename(columns={'username':'count'})
+        date_comments_byday['date'] = date_comments_byday['date'].dt.strftime('%d %b %Y')
+        
+        fig_byday = px.bar(date_comments_byday,x='date',y='count')
+        st.subheader('Number of comments per day')
+        st.plotly_chart(fig_byday,use_container_width=True)
 
-    average_per_days = 4
+        fig_mean_time = go.Figure()
 
-    for platform, comments in df_platforms_comments.items():
-        date_comments_byday_mean = comments.resample(f'{average_per_days}D', on='date')['grade'].mean().reset_index().rename(columns={'grade':'mean'})
-        date_comments_byday_mean['mean']=date_comments_byday_mean['mean'].fillna(method='ffill')
-        fig_mean_time.add_trace(go.Scatter(x=date_comments_byday_mean['date'],y=date_comments_byday_mean['mean'],mode='lines',name=platform))
+        average_per_days = 4
 
-    st.subheader(f'Average grades every {average_per_days} days per platform')
-    st.plotly_chart(fig_mean_time,use_container_width=True)
+        for platform, comments in df_platforms_comments.items():
+            date_comments_byday_mean = comments.resample(f'{average_per_days}D', on='date')['grade'].mean().reset_index().rename(columns={'grade':'mean'})
+            date_comments_byday_mean['mean']=date_comments_byday_mean['mean'].fillna(method='ffill')
+            fig_mean_time.add_trace(go.Scatter(x=date_comments_byday_mean['date'],y=date_comments_byday_mean['mean'],mode='lines',name=platform))
 
+        st.subheader(f'Average grades every {average_per_days} days per platform')
+        st.plotly_chart(fig_mean_time,use_container_width=True)
+    else:
+        st.subheader("No comments")
     AgGrid(game_df)
 
-def comment_page():
+def comment_page(df):
     pass
 
 
@@ -184,8 +175,8 @@ if __name__ == "__main__":
         page_selected = st.radio('Go To',['Main','Game','Comments'])
 
     if page_selected == 'Main':
-        main_page()
+        main_page(df)
     elif page_selected == 'Game':
-        game_page()
+        game_page(df)
     elif page_selected == 'Comments':
-        comment_page()
+        comment_page(df)
