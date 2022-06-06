@@ -87,9 +87,13 @@ def naive_bombing(dataframe, sentiment='positive'):
 
 
 def extract_game_sentiment(dataframe, game='Elden Ring'):
-    dataframe = dataframe[dataframe['game'] == game]
-    dataframe = sentiment_vader(dataframe=dataframe)
-    dataframe = sentiment_textblob(dataframe=dataframe)
+    try:
+        if game:
+            dataframe = dataframe[dataframe['game'] == game]
+        dataframe = sentiment_vader(dataframe=dataframe)
+        # dataframe = sentiment_textblob(dataframe=dataframe)
+    except:
+        print("There is no comment with the game")
     return dataframe
 
 
@@ -115,7 +119,7 @@ def sentiment_textblob(dataframe):
 def predict_review_bombing(dataframe, sentiment='positive'):
     try:
         if sentiment == 'positive':
-            comments = dataframe[(dataframe['compound_vader'] < 0.25)]
+            comments = dataframe[(dataframe['compound_vader'] < 0.5)]
         if sentiment == 'negative':
             comments = dataframe[(dataframe['compound_vader'] > 0.5)]
         if not sentiment:
@@ -129,12 +133,28 @@ def predict_review_bombing(dataframe, sentiment='positive'):
         print("Predict Review Bombing accepts only 'positive' or 'negative' or 'None' sentiment")
 
 
+def predict_review_bombing_table(dataframe, sentiment='positive', confidence=None):
+    try:
+        if sentiment == 'positive':
+            if confidence == 'High':
+                return dataframe[(dataframe['compound_vader'] < 0.5)]
+            else:
+                return dataframe[(dataframe['compound_vader'] < 0.25)]
+        if sentiment == 'negative':
+            if confidence == 'High':
+                return dataframe[(dataframe['compound_vader'] > 0.5)]
+            else:
+                return dataframe[(dataframe['compound_vader'] > 0.25)]
+    except:
+        print("Predict Review Bombing Table accepts only 'positive' or 'negative' or 'None' sentiment")
+
+
 if __name__ == "__main__":
     dataset = get_data('data/dataset500.csv')
     data = [{'game': dataset['name'][i], 'platform': dataset['platform'][i],
              'grade': comment['grade'][0], 'comment': comment['comment'][0], 'username': comment['username'][0]}
             for i, comments in enumerate(dataset['comments']) for comment in comments]
-    df = pd.DataFrame(data, columns=['game', 'platform', 'comment', 'username', 'grade'])
+    df = pd.DataFrame(data, columns=['game', 'platform', 'grade', 'comment', 'username'])
     df['comment_normalized'] = [normalize_lemm_stem(comment) for comment in df['comment']]
     names = extreme_behaviour(dataframe=df, sentiment='positive')
     review_pos = naive_bombing(dataframe=df, sentiment='positive')
