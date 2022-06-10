@@ -173,18 +173,42 @@ def game_page(df):
             negative_bombing_table = get_review_bombing(df_comments, sentiment='negative', confidence=confident)
             try:
                 st.subheader('Positive Review Bombing Example')
-                comm_num = st.number_input('Comment number', min_value=0,
-                                           max_value=len(positive_bombing_table)-1,
-                                           value=0, step=1)
-                st.markdown(positive_bombing_table.iloc[comm_num]['comment'])
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                with col1:
+                    comm_num = st.number_input('Comment number', min_value=0,
+                                               max_value=len(positive_bombing_table)-1,
+                                               value=0, step=1)
+                comm = positive_bombing_table.iloc[comm_num]['comment']
+                st.markdown(comm)
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                with col1:
+                    if st.button("Positive Review Bombing"):
+                        comm['label'] = "Positive Bombing"
+                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
+                with col2:
+                    if st.button("No Positive Review Bombing"):
+                        comm['label'] = "No Bombing"
+                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
             except:
                 st.markdown('No positive comment considered as Review Bombing')
             try:
                 st.subheader('Negative Review Bombing Example')
-                comm_num = st.number_input('Comment number', min_value=0,
-                                           max_value=len(negative_bombing_table)-1,
-                                           value=0, step=1)
-                st.markdown(negative_bombing_table.iloc[comm_num]['comment'])
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                with col1:
+                    comm_num = st.number_input('Comment number', min_value=0,
+                                               max_value=len(negative_bombing_table)-1,
+                                               value=0, step=1)
+                comm = negative_bombing_table.iloc[comm_num]['comment']
+                st.markdown(comm)
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                with col1:
+                    if st.button("Negative Review Bombing"):
+                        comm['label'] = "Negative Bombing"
+                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
+                with col2:
+                    if st.button("No Negative Review Bombing"):
+                        comm['label'] = "No Bombing"
+                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
             except:
                 st.markdown('No negative comment considered as Review Bombing')
     else:
@@ -200,14 +224,29 @@ def load_data():
     df = get_data('data/dataset500.csv')
     return df
 
+@st.cache()
+def get_extreme_behaviour(df, sentiment='positive'):
+    names = [{'username': comment['username'][0], 'grade': comment['grade'][0]}
+                 for comments in df['comments'] for comment in comments]
+    usernames = pd.DataFrame(names)
+    return extreme_behaviour(dataframe=usernames, sentiment=sentiment)
+
 
 def get_review_bombing(dataset, sentiment='positive', confidence='High'):
     dataset['comment_normalized'] = [normalize_lemm_stem(comment) for comment in dataset['comment']]
     review = naive_bombing(dataframe=dataset, sentiment=sentiment)
     review = extract_game_sentiment(dataframe=review, game=None)
     if confidence == 'High':
-        usernames = extreme_behaviour(dataframe=dataset, sentiment=sentiment)
-        review = review[review['username'].isin(usernames)]
+        if sentiment == 'positive':
+            try:
+                review = review[review['username'].isin(usernames_pos)]
+            except:
+                pass
+        elif sentiment == 'negative':
+            try:
+                review = review[review['username'].isin(usernames_neg)]
+            except:
+                pass
         return predict_review_bombing_table(dataframe=review, sentiment=sentiment, confidence=confidence)
     elif confidence == 'Medium':
         return predict_review_bombing_table(dataframe=review, sentiment=sentiment, confidence=confidence)
@@ -219,6 +258,8 @@ if __name__ == "__main__":
     st.set_page_config(page_title='JVC analytics', layout='wide')
 
     df = load_data()
+    usernames_pos = get_extreme_behaviour(df, sentiment='positive')
+    usernames_neg = get_extreme_behaviour(df, sentiment='negative')
 
     with st.sidebar:
         st.subheader('navigation')
