@@ -17,6 +17,11 @@ french_stopwords = set(stopwords.words('french'))
 
 
 def normalize_lemm_stem(comment):
+    """
+    Normalize comments
+    :param comment: comment to normalize
+    :return: normalized comment
+    """
     # lowercase
     comment = comment.lower()
     # remove punctuation
@@ -40,6 +45,10 @@ def normalize_lemm_stem(comment):
 
 
 def get_bombing_words():
+    """
+    Get dictionary of review bombing words
+    :return: list of review bombing words
+    """
     with open('Words/review-bombing-words.txt', errors='ignore', encoding="utf-8") as opened:
         contents = opened.read()
     contents_lines = contents.split('\n')
@@ -48,6 +57,11 @@ def get_bombing_words():
 
 
 def convert_to_grade(percentage):
+    """
+    Convert a range [-1, 1] to a grade [0, 20] where 0 => 12
+    :param percentage: range[-1, 1]
+    :return: grade[0, 20]
+    """
     if percentage < 0:
         grade = np.floor(12 * percentage + 12)
     else:
@@ -56,6 +70,12 @@ def convert_to_grade(percentage):
 
 
 def extreme_behaviour(dataframe, sentiment='positive'):
+    """
+    Get a list of users with a suspicious behaviour by given always excellent or bad grading
+    :param dataframe: dataframe to analyse
+    :param sentiment: kind of sentiment to extract 'positive' or 'negative'
+    :return: list of users with an extreme behaviour
+    """
     df_name = dataframe.groupby('username').mean('grade')
     df_name_count = dataframe.groupby('username').count()
     df_name['count'] = df_name_count['grade']
@@ -70,6 +90,12 @@ def extreme_behaviour(dataframe, sentiment='positive'):
 
 
 def naive_bombing(dataframe, sentiment='positive'):
+    """
+    Filter suspicious comments involved in review bombing process
+    :param dataframe: dataframe to analyse
+    :param sentiment: kind of sentiment to extract 'positive' or 'negative'
+    :return: Dataframe suspected of review bombing
+    """
     bombing = []
     bombing_words = get_bombing_words()
     try:
@@ -86,7 +112,14 @@ def naive_bombing(dataframe, sentiment='positive'):
         print("Naive Bombing accepts only 'positive' or 'negative' sentiment")
 
 
-def extract_game_sentiment(dataframe, game='Elden Ring'):
+def extract_game_sentiment(dataframe, game=None):
+    """
+    Polarize comments in a range [-1, 1] with Vader and (TextBlob)
+    Filter dataframe by a selected game
+    :param dataframe: dataframe to polarize
+    :param game: (optional) select a specific game
+    :return: polarized dataframe
+    """
     try:
         if game:
             dataframe = dataframe[dataframe['game'] == game]
@@ -98,6 +131,11 @@ def extract_game_sentiment(dataframe, game='Elden Ring'):
 
 
 def sentiment_vader(dataframe):
+    """
+    Polarize comments in a range [-1, 1] with Vader
+    :param dataframe: dataframe to polarize
+    :return: polarized dataframe
+    """
     # Sentiment analysis using Vader range is [-1, 1]
     # https://github.com/cjhutto/vaderSentiment
     senti_vader = [SentimentIntensityAnalyzer().polarity_scores(comment)
@@ -107,6 +145,11 @@ def sentiment_vader(dataframe):
 
 
 def sentiment_textblob(dataframe):
+    """
+    Polarize comments in a range [-1, 1] with TextBlob
+    :param dataframe: dataframe to polarize
+    :return: polarized dataframe
+    """
     # Sentiment analysis using TextBlob range is [-1, 1]
     # Dedicated for French: https://github.com/sloria/textblob-fr
     sentiment_blob = [TextBlob(comment, pos_tagger=PatternTagger(), analyzer=PatternAnalyzer()).sentiment
@@ -116,12 +159,25 @@ def sentiment_textblob(dataframe):
     return dataframe
 
 
-def predict_review_bombing(dataframe, sentiment='positive'):
+def predict_review_bombing(dataframe, sentiment=None, confidence=None):
+    """
+    Prediction of review bombing comments for a defined dataframe
+    :param dataframe: dataframe for review bombing prediction
+    :param sentiment: kind of sentiment to extract 'positive', 'negative' or None
+    :param confidence: confidence to detect review bombing 'High', 'Medium', 'Low' or None
+    :return: random comment from predicted dataframe
+    """
     try:
         if sentiment == 'positive':
-            comments = dataframe[(dataframe['compound_vader'] < 0.5)]
+            if confidence == 'High':
+                comments = dataframe[(dataframe['compound_vader'] < 0.5)]
+            else:
+                comments = dataframe[(dataframe['compound_vader'] < 0.25)]
         if sentiment == 'negative':
-            comments = dataframe[(dataframe['compound_vader'] > 0.5)]
+            if confidence == 'High':
+                comments = dataframe[(dataframe['compound_vader'] > 0.5)]
+            else:
+                comments = dataframe[(dataframe['compound_vader'] > 0.25)]
         if not sentiment:
             comments = dataframe
         try:
@@ -133,33 +189,48 @@ def predict_review_bombing(dataframe, sentiment='positive'):
         print("Predict Review Bombing accepts only 'positive' or 'negative' or 'None' sentiment")
 
 
-def predict_review_bombing_table(dataframe, sentiment='positive', confidence=None):
+def predict_review_bombing_table(dataframe, sentiment=None, confidence=None):
+    """
+    Prediction of review bombing comments for a defined dataframe
+    :param dataframe: dataframe for review bombing prediction
+    :param sentiment: kind of sentiment to extract 'positive' or 'negative'
+    :param confidence: confidence to detect review bombing 'High', 'Medium' or 'Low'
+    :return: predicted dataframe
+    """
     try:
         if sentiment == 'positive':
             if confidence == 'High':
-                return dataframe[(dataframe['compound_vader'] < 0.5)]
-            else:
                 return dataframe[(dataframe['compound_vader'] < 0.25)]
-        if sentiment == 'negative':
+            else:
+                return dataframe[(dataframe['compound_vader'] < 0.5)]
+        elif sentiment == 'negative':
             if confidence == 'High':
                 return dataframe[(dataframe['compound_vader'] > 0.5)]
             else:
                 return dataframe[(dataframe['compound_vader'] > 0.25)]
+        else:
+            return dataframe
     except:
         print("Predict Review Bombing Table accepts only 'positive' or 'negative' or 'None' sentiment")
 
 
 if __name__ == "__main__":
+    # Load dataset
     dataset = get_data('data/dataset500.csv')
     data = [{'game': dataset['name'][i], 'platform': dataset['platform'][i],
              'grade': comment['grade'][0], 'comment': comment['comment'][0], 'username': comment['username'][0]}
             for i, comments in enumerate(dataset['comments']) for comment in comments]
     df = pd.DataFrame(data, columns=['game', 'platform', 'grade', 'comment', 'username'])
+    # Normalize comments
     df['comment_normalized'] = [normalize_lemm_stem(comment) for comment in df['comment']]
-    names = extreme_behaviour(dataframe=df, sentiment='positive')
+    # Process the naive bombing
     review_pos = naive_bombing(dataframe=df, sentiment='positive')
+    # Extract sentiment for a define game
     review_pos = extract_game_sentiment(dataframe=review_pos, game='Gran Turismo 7')
+    # Get users with extreme behaviour
+    names = extreme_behaviour(dataframe=df, sentiment='positive')
     review_pos = review_pos[review_pos['username'].isin(names)]
     print(review_pos)
+    # Predict review bombing comment
     pred = predict_review_bombing(dataframe=review_pos, sentiment='positive')
     print(pred[0])

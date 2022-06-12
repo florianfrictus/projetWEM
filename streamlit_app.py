@@ -26,7 +26,7 @@ def main_page(df):
         st.header('Number of comments')
         st.subheader(sum([len(comments) for comments in df['comments']]))
 
-    platforms_count = df['platform'].value_counts().to_frame().reset_index()\
+    platforms_count = df['platform'].value_counts().to_frame().reset_index() \
         .rename(columns={'platform': 'count', 'index': 'platform'})
 
     st.subheader('Number of games per platform')
@@ -35,13 +35,13 @@ def main_page(df):
     st.plotly_chart(fig_platform, use_container_width=True)
 
     genres_exploded = df.explode('genres')
-    genres_count = genres_exploded['genres'].value_counts().to_frame().reset_index()\
+    genres_count = genres_exploded['genres'].value_counts().to_frame().reset_index() \
         .rename(columns={'genres': 'count', 'index': 'genres'})
     st.subheader('Number of games per genre')
     fig_genres = px.bar(genres_count, x='genres', y='count')
     st.plotly_chart(fig_genres, use_container_width=True)
 
-    release_date_bymonth = df.resample('M', on='release_date')['name'].count().reset_index()\
+    release_date_bymonth = df.resample('M', on='release_date')['name'].count().reset_index() \
         .rename(columns={'name': 'count'})
     release_date_bymonth['release_date'] = release_date_bymonth['release_date'].dt.strftime('%b %Y')
     fig_bymonth = px.bar(release_date_bymonth, x='release_date', y='count')
@@ -64,7 +64,7 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
     game_df['n_comments'] = [len(comments) for comments in game_df['comments']]
     platforms = game_df['platform'].to_list()
     genres = game_df.iloc[0]['genres']
-    
+
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     with col1:
@@ -80,7 +80,7 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
     st.write(f"**Editorial Grade**:{game_df.iloc[0]['editorial_grade']}")
     st.write("**Users grade**:")
 
-    cols_size = [1]*len(platforms)
+    cols_size = [1] * len(platforms)
     cols_grades = st.columns(cols_size)
 
     with_comments = True
@@ -88,14 +88,14 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
     df_platforms_comments = {}
     for platform, col in zip(platforms, cols_grades):
         comments_platform = game_df[game_df['platform'] == platform].iloc[0]['comments']
-        grade_platform = sum([comment['grade'][0] for comment in comments_platform])/len(comments_platform)
+        grade_platform = sum([comment['grade'][0] for comment in comments_platform]) / len(comments_platform)
         try:
             comments_platform = pd.DataFrame([{'date': comment['date'][0], 'grade': comment['grade'][0],
-                                              'comment': comment['comment'][0], 'username': comment['username'][0]}
+                                               'comment': comment['comment'][0], 'username': comment['username'][0]}
                                               for comment in comments_platform])
         except KeyError:
             with_comments = False
-        
+
         if with_comments:
             comments_platform['date'] = pd.to_datetime(comments_platform['date'])
             df_platforms_comments[platform] = comments_platform
@@ -117,13 +117,13 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
                 orientation='h',
                 text=df_grades_range['n_comments'],
                 textposition='inside'
-                )])
+            )])
 
             fig_grades_range.update_layout(
                 yaxis_title='',
-                yaxis_visible=True, 
+                yaxis_visible=True,
                 yaxis_showticklabels=True,
-                xaxis_visible=False, 
+                xaxis_visible=False,
                 xaxis_showticklabels=False,
                 margin=dict(l=5, r=5, b=5),
                 title=f"{platform}: {grade_platform:.2f}",
@@ -140,17 +140,17 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
         st.subheader('Number of comments per platform')
         fig_comments_byplatform = px.bar(game_df.sort_values('n_comments'), x='platform', y='n_comments')
         st.plotly_chart(fig_comments_byplatform, use_container_width=True)
-    
-        comments = [{'date': comment['date'][0], 'grade':comment['grade'][0], 'comment':comment['comment'][0],
-                     'username':comment['username'][0]} for comments in game_df['comments'] for comment in comments]
+
+        comments = [{'date': comment['date'][0], 'grade': comment['grade'][0], 'comment': comment['comment'][0],
+                     'username': comment['username'][0]} for comments in game_df['comments'] for comment in comments]
         df_comments = pd.DataFrame(comments)
         # print(df_comments)
         df_comments['date'] = pd.to_datetime(df_comments['date'])
 
-        date_comments_byday = df_comments.resample('D', on='date')['username'].count().reset_index()\
+        date_comments_byday = df_comments.resample('D', on='date')['username'].count().reset_index() \
             .rename(columns={'username': 'count'})
         date_comments_byday['date'] = date_comments_byday['date'].dt.strftime('%d %b %Y')
-        
+
         fig_byday = px.bar(date_comments_byday, x='date', y='count')
         st.subheader('Number of comments per day')
         st.plotly_chart(fig_byday, use_container_width=True)
@@ -160,7 +160,7 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
         average_per_days = 4
 
         for platform, comments in df_platforms_comments.items():
-            date_comments_byday_mean = comments.resample(f'{average_per_days}D', on='date')['grade'].mean()\
+            date_comments_byday_mean = comments.resample(f'{average_per_days}D', on='date')['grade'].mean() \
                 .reset_index().rename(columns={'grade': 'mean'})
             date_comments_byday_mean['mean'] = date_comments_byday_mean['mean'].fillna(method='ffill')
             fig_mean_time.add_trace(go.Scatter(x=date_comments_byday_mean['date'], y=date_comments_byday_mean['mean'],
@@ -169,30 +169,27 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
         st.subheader(f'Average grades every {average_per_days} days per platform')
         st.plotly_chart(fig_mean_time, use_container_width=True)
         if review_bombing:
-            # positive_bombing_table = get_review_bombing(df_comments, sentiment='positive', confidence=confident)
-            # negative_bombing_table = get_review_bombing(df_comments, sentiment='negative', confidence=confident)
-            positive_bombing_table=positive_bombing_table[(positive_bombing_table['game']==game) & (positive_bombing_table['confidence']==confident)]
-            negative_bombing_table=negative_bombing_table[(negative_bombing_table['game']==game) & (negative_bombing_table['confidence']==confident)]
+            positive_bombing = positive_bombing_table[(positive_bombing_table['game'] == game)
+                                                      & (positive_bombing_table['confidence'] == confident)]
+            negative_bombing = negative_bombing_table[(negative_bombing_table['game'] == game)
+                                                      & (negative_bombing_table['confidence'] == confident)]
             try:
                 st.subheader('Positive Review Bombing Example')
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 with col1:
                     comm_num = st.number_input('Comment number', min_value=0,
-                                               max_value=len(positive_bombing_table)-1,
+                                               max_value=len(positive_bombing) - 1,
                                                value=0, step=1)
                 with col2:
-                    st.text_input('Username', positive_bombing_table.iloc[comm_num]['username'])
-                comm = positive_bombing_table.iloc[comm_num]['comment']
+                    st.text_input('Username', positive_bombing.iloc[comm_num]['username'])
+                comm = positive_bombing.iloc[comm_num]['comment']
                 st.markdown(comm)
-                # col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                # with col1:
-                #     if st.button("Positive Review Bombing"):
-                #         positive_bombing_table[comm_num]['label'] = "Positive Bombing"
-                #         positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
-                # with col2:
-                #     if st.button("No Positive Review Bombing"):
-                #         positive_bombing_table[comm_num]['label'] = "No Bombing"
-                #         positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                with col1:
+                    if st.button('Not Positive Bombing'):
+                        positive_bombing_table.iloc[positive_bombing.index[comm_num]]['confidence'] = None
+                        positive_bombing_table.to_csv('data/positive_bombing.csv')
+
             except:
                 st.markdown('No positive comment considered as Review Bombing')
             try:
@@ -200,23 +197,17 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 with col1:
                     comm_num = st.number_input('Comment number', min_value=0,
-                                               max_value=len(negative_bombing_table)-1,
+                                               max_value=len(negative_bombing) - 1,
                                                value=0, step=1)
                 with col2:
-                    st.text_input('Username', negative_bombing_table.iloc[comm_num]['username'])
-                # with col3:
-                #     st.text_input('Date', negative_bombing_table.iloc[comm_num]['date'])
-                comm = negative_bombing_table.iloc[comm_num]['comment']
+                    st.text_input('Username', negative_bombing.iloc[comm_num]['username'])
+                comm = negative_bombing.iloc[comm_num]['comment']
                 st.markdown(comm)
-                # col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                # with col1:
-                #     if st.button("Negative Review Bombing"):
-                #         negative_bombing_table[comm_num]['label'] = "Negative Bombing"
-                #         negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
-                # with col2:
-                #     if st.button("No Negative Review Bombing"):
-                #         negative_bombing_table[comm_num]['label'] = "No Bombing"
-                #         negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                with col1:
+                    if st.button('Not Negative Bombing'):
+                        negative_bombing_table.iloc[negative_bombing.index[comm_num]]['confidence'] = None
+                        negative_bombing_table.to_csv('data/negative_bombing.csv')
             except:
                 st.markdown('No negative comment considered as Review Bombing')
     else:
@@ -232,11 +223,13 @@ def load_data():
     df = get_data('data/dataset500.csv')
     return df
 
-@st.cache()
+
+@st.cache(allow_output_mutation=True)
 def load_review_bombing():
     pos = pd.read_csv('data/positive_bombing.csv')
     neg = pd.read_csv('data/negative_bombing.csv')
     return pos, neg
+
 
 if __name__ == "__main__":
     st.set_page_config(page_title='JVC analytics', layout='wide')
