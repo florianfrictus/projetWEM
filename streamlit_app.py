@@ -178,17 +178,21 @@ def game_page(df):
                     comm_num = st.number_input('Comment number', min_value=0,
                                                max_value=len(positive_bombing_table)-1,
                                                value=0, step=1)
+                with col2:
+                    st.text_input('Username', positive_bombing_table.iloc[comm_num]['username'])
+                with col3:
+                    st.text_input('Date', positive_bombing_table.iloc[comm_num]['date'])
                 comm = positive_bombing_table.iloc[comm_num]['comment']
                 st.markdown(comm)
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 with col1:
                     if st.button("Positive Review Bombing"):
-                        comm['label'] = "Positive Bombing"
-                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
+                        positive_bombing_table[comm_num]['label'] = "Positive Bombing"
+                        positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
                 with col2:
                     if st.button("No Positive Review Bombing"):
-                        comm['label'] = "No Bombing"
-                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
+                        positive_bombing_table[comm_num]['label'] = "No Bombing"
+                        positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
             except:
                 st.markdown('No positive comment considered as Review Bombing')
             try:
@@ -198,17 +202,21 @@ def game_page(df):
                     comm_num = st.number_input('Comment number', min_value=0,
                                                max_value=len(negative_bombing_table)-1,
                                                value=0, step=1)
+                with col2:
+                    st.text_input('Username', negative_bombing_table.iloc[comm_num]['username'])
+                with col3:
+                    st.text_input('Date', negative_bombing_table.iloc[comm_num]['date'])
                 comm = negative_bombing_table.iloc[comm_num]['comment']
                 st.markdown(comm)
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 with col1:
                     if st.button("Negative Review Bombing"):
-                        comm['label'] = "Negative Bombing"
-                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
+                        negative_bombing_table[comm_num]['label'] = "Negative Bombing"
+                        negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
                 with col2:
                     if st.button("No Negative Review Bombing"):
-                        comm['label'] = "No Bombing"
-                        comm.to_csv('data/review_bombing.csv', mode='w', header=False)
+                        negative_bombing_table[comm_num]['label'] = "No Bombing"
+                        negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
             except:
                 st.markdown('No negative comment considered as Review Bombing')
     else:
@@ -224,6 +232,7 @@ def load_data():
     df = get_data('data/dataset500.csv')
     return df
 
+
 @st.cache()
 def get_extreme_behaviour(df, sentiment='positive'):
     names = [{'username': comment['username'][0], 'grade': comment['grade'][0]}
@@ -232,6 +241,7 @@ def get_extreme_behaviour(df, sentiment='positive'):
     return extreme_behaviour(dataframe=usernames, sentiment=sentiment)
 
 
+@st.cache()
 def get_review_bombing(dataset, sentiment='positive', confidence='High'):
     dataset['comment_normalized'] = [normalize_lemm_stem(comment) for comment in dataset['comment']]
     review = naive_bombing(dataframe=dataset, sentiment=sentiment)
