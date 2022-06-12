@@ -49,14 +49,14 @@ def main_page(df):
     st.plotly_chart(fig_bymonth, use_container_width=True)
 
 
-def game_page(df):
+def game_page(df, positive_bombing_table, negative_bombing_table):
     with st.sidebar:
         unique_games = np.unique(df['name'])
         game = st.selectbox('Select the games', unique_games, index=int(np.where(unique_games == DEFAULT_GAME)[0][0]))
         review_bombing = st.checkbox('Review Bombing Comment')
         if review_bombing:
             confident = st.select_slider('Select the confidence of Review Bombing Detection',
-                                         options=['Poor', 'Medium', 'High'], value='High')
+                                         options=['LOW', 'MEDIUM', 'HIGH'], value='HIGH')
 
     st.title(game)
 
@@ -169,8 +169,10 @@ def game_page(df):
         st.subheader(f'Average grades every {average_per_days} days per platform')
         st.plotly_chart(fig_mean_time, use_container_width=True)
         if review_bombing:
-            positive_bombing_table = get_review_bombing(df_comments, sentiment='positive', confidence=confident)
-            negative_bombing_table = get_review_bombing(df_comments, sentiment='negative', confidence=confident)
+            # positive_bombing_table = get_review_bombing(df_comments, sentiment='positive', confidence=confident)
+            # negative_bombing_table = get_review_bombing(df_comments, sentiment='negative', confidence=confident)
+            positive_bombing_table=positive_bombing_table[(positive_bombing_table['game']==game) & (positive_bombing_table['confidence']==confident)]
+            negative_bombing_table=negative_bombing_table[(negative_bombing_table['game']==game) & (negative_bombing_table['confidence']==confident)]
             try:
                 st.subheader('Positive Review Bombing Example')
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
@@ -180,19 +182,17 @@ def game_page(df):
                                                value=0, step=1)
                 with col2:
                     st.text_input('Username', positive_bombing_table.iloc[comm_num]['username'])
-                with col3:
-                    st.text_input('Date', positive_bombing_table.iloc[comm_num]['date'])
                 comm = positive_bombing_table.iloc[comm_num]['comment']
                 st.markdown(comm)
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                with col1:
-                    if st.button("Positive Review Bombing"):
-                        positive_bombing_table[comm_num]['label'] = "Positive Bombing"
-                        positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
-                with col2:
-                    if st.button("No Positive Review Bombing"):
-                        positive_bombing_table[comm_num]['label'] = "No Bombing"
-                        positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
+                # col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                # with col1:
+                #     if st.button("Positive Review Bombing"):
+                #         positive_bombing_table[comm_num]['label'] = "Positive Bombing"
+                #         positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
+                # with col2:
+                #     if st.button("No Positive Review Bombing"):
+                #         positive_bombing_table[comm_num]['label'] = "No Bombing"
+                #         positive_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='a', header=False)
             except:
                 st.markdown('No positive comment considered as Review Bombing')
             try:
@@ -204,19 +204,19 @@ def game_page(df):
                                                value=0, step=1)
                 with col2:
                     st.text_input('Username', negative_bombing_table.iloc[comm_num]['username'])
-                with col3:
-                    st.text_input('Date', negative_bombing_table.iloc[comm_num]['date'])
+                # with col3:
+                #     st.text_input('Date', negative_bombing_table.iloc[comm_num]['date'])
                 comm = negative_bombing_table.iloc[comm_num]['comment']
                 st.markdown(comm)
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                with col1:
-                    if st.button("Negative Review Bombing"):
-                        negative_bombing_table[comm_num]['label'] = "Negative Bombing"
-                        negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
-                with col2:
-                    if st.button("No Negative Review Bombing"):
-                        negative_bombing_table[comm_num]['label'] = "No Bombing"
-                        negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
+                # col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                # with col1:
+                #     if st.button("Negative Review Bombing"):
+                #         negative_bombing_table[comm_num]['label'] = "Negative Bombing"
+                #         negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
+                # with col2:
+                #     if st.button("No Negative Review Bombing"):
+                #         negative_bombing_table[comm_num]['label'] = "No Bombing"
+                #         negative_bombing_table[comm_num].to_csv('data/review_bombing.csv', mode='w', header=False)
             except:
                 st.markdown('No negative comment considered as Review Bombing')
     else:
@@ -232,44 +232,17 @@ def load_data():
     df = get_data('data/dataset500.csv')
     return df
 
-
 @st.cache()
-def get_extreme_behaviour(df, sentiment='positive'):
-    names = [{'username': comment['username'][0], 'grade': comment['grade'][0]}
-                 for comments in df['comments'] for comment in comments]
-    usernames = pd.DataFrame(names)
-    return extreme_behaviour(dataframe=usernames, sentiment=sentiment)
-
-
-@st.cache()
-def get_review_bombing(dataset, sentiment='positive', confidence='High'):
-    dataset['comment_normalized'] = [normalize_lemm_stem(comment) for comment in dataset['comment']]
-    review = naive_bombing(dataframe=dataset, sentiment=sentiment)
-    review = extract_game_sentiment(dataframe=review, game=None)
-    if confidence == 'High':
-        if sentiment == 'positive':
-            try:
-                review = review[review['username'].isin(usernames_pos)]
-            except:
-                pass
-        elif sentiment == 'negative':
-            try:
-                review = review[review['username'].isin(usernames_neg)]
-            except:
-                pass
-        return predict_review_bombing_table(dataframe=review, sentiment=sentiment, confidence=confidence)
-    elif confidence == 'Medium':
-        return predict_review_bombing_table(dataframe=review, sentiment=sentiment, confidence=confidence)
-    else:
-        return review
-
+def load_review_bombing():
+    pos = pd.read_csv('data/positive_bombing.csv')
+    neg = pd.read_csv('data/negative_bombing.csv')
+    return pos, neg
 
 if __name__ == "__main__":
     st.set_page_config(page_title='JVC analytics', layout='wide')
 
     df = load_data()
-    usernames_pos = get_extreme_behaviour(df, sentiment='positive')
-    usernames_neg = get_extreme_behaviour(df, sentiment='negative')
+    positive_bombing_table, negative_bombing_table = load_review_bombing()
 
     with st.sidebar:
         st.subheader('navigation')
@@ -278,6 +251,6 @@ if __name__ == "__main__":
     if page_selected == 'Main':
         main_page(df)
     elif page_selected == 'Game':
-        game_page(df)
+        game_page(df, positive_bombing_table, negative_bombing_table)
     elif page_selected == 'Comments':
         comment_page(df)
