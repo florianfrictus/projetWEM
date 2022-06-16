@@ -1,11 +1,10 @@
 import streamlit as st
-import altair as alt
 import pandas as pd
 import numpy as np
 
-from st_aggrid import AgGrid
 from tools.read import get_data
-from review_bombing import *
+from nltk import FreqDist, word_tokenize
+from nltk.corpus import stopwords
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -154,6 +153,16 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
         fig_byday = px.bar(date_comments_byday, x='date', y='count')
         st.subheader('Number of comments per day')
         st.plotly_chart(fig_byday, use_container_width=True)
+
+        french_stopwords = set(stopwords.words('french'))
+        french_stopwords = french_stopwords.union([',', ':', '.', '(', ')', '-', '!', ';', '\'', '...'])
+        fdist = FreqDist(w.lower() for comment in df_comments['comment']
+                         for w in word_tokenize(comment) if w not in french_stopwords and len(w) > 1)
+        most_common_words = pd.DataFrame(fdist.most_common(25), columns=['Word', 'Count'])
+
+        fig_most_common = px.bar(most_common_words, x='Word', y='Count')
+        st.subheader('Words occurences')
+        st.plotly_chart(fig_most_common, use_container_width=True)
 
         fig_mean_time = go.Figure()
 

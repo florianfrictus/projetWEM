@@ -171,13 +171,17 @@ def predict_review_bombing(dataframe, sentiment=None, confidence=None):
         if sentiment == 'positive':
             if confidence == 'High':
                 comments = dataframe[(dataframe['compound_vader'] < 0.5)]
-            else:
+            elif confidence == 'Medium':
                 comments = dataframe[(dataframe['compound_vader'] < 0.25)]
+            else:
+                comments = dataframe
         if sentiment == 'negative':
             if confidence == 'High':
                 comments = dataframe[(dataframe['compound_vader'] > 0.5)]
-            else:
+            elif confidence == 'Medium':
                 comments = dataframe[(dataframe['compound_vader'] > 0.25)]
+            else:
+                comments = dataframe
         if not sentiment:
             comments = dataframe
         try:
@@ -214,6 +218,22 @@ def predict_review_bombing_table(dataframe, sentiment=None, confidence=None):
         print("Predict Review Bombing Table accepts only 'positive' or 'negative' or 'None' sentiment")
 
 
+def review_bombing_prediction_process(dataframe, confidence='High', sentiment='positive', game=None):
+    # Normalize comments
+    dataframe['comment_normalized'] = [normalize_lemm_stem(comment) for comment in dataframe['comment']]
+    # Process the naive bombing
+    review = naive_bombing(dataframe=dataframe, sentiment=sentiment)
+    # Extract sentiment for a define game
+    review = extract_game_sentiment(dataframe=review, game=game)
+    if confidence == 'High':
+        # Get users with extreme behaviour
+        names = extreme_behaviour(dataframe=dataframe, sentiment=sentiment)
+        review = review[review['username'].isin(names)]
+    # Predict review bombing comment
+    pred = predict_review_bombing(dataframe=review, sentiment=sentiment, confidence=confidence)
+    return review, pred
+
+
 if __name__ == "__main__":
     # Load dataset
     dataset = get_data('data/dataset500.csv')
@@ -221,16 +241,9 @@ if __name__ == "__main__":
              'grade': comment['grade'][0], 'comment': comment['comment'][0], 'username': comment['username'][0]}
             for i, comments in enumerate(dataset['comments']) for comment in comments]
     df = pd.DataFrame(data, columns=['game', 'platform', 'grade', 'comment', 'username'])
-    # Normalize comments
-    df['comment_normalized'] = [normalize_lemm_stem(comment) for comment in df['comment']]
-    # Process the naive bombing
-    review_pos = naive_bombing(dataframe=df, sentiment='positive')
-    # Extract sentiment for a define game
-    review_pos = extract_game_sentiment(dataframe=review_pos, game='Gran Turismo 7')
-    # Get users with extreme behaviour
-    names = extreme_behaviour(dataframe=df, sentiment='positive')
-    review_pos = review_pos[review_pos['username'].isin(names)]
-    print(review_pos)
-    # Predict review bombing comment
-    pred = predict_review_bombing(dataframe=review_pos, sentiment='positive')
+    review, pred = review_bombing_prediction_process(dataframe=df,
+                                                     confidence='Low',
+                                                     sentiment='positive',
+                                                     game='Gran Turismo 7')
+    print(review)
     print(pred[0])
