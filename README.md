@@ -28,6 +28,11 @@ Launch streamlit server `streamlit_app.py`.
 streamlit run streamlit_app.py
 ```
 
+If you want the text analysis to be working on the website, you need to add the model (available: [here](https://www.swisstransfer.com/d/78719744-1e73-4057-9542-5bb8683c48af)).
+1. Download the file.
+2. Unzip its content in the `data` folder of the project.
+3. Folder should be `data/4_camembert/` with the files of the model.
+
 Code to get data from .csv `/data/dataset500.csv`.
 
 ```python
