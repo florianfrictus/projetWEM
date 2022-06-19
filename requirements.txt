@@ -7,4 +7,18 @@ pandas
 numpy
 streamlit
 streamlit-aggrid
+beautifulsoup4
+itemadapter
+nltk
+contractions
+textblob
+textblob_fr
+plotly
+vaderSentiment_fr
+scikit-learn
+matplotlib
+transformers
+datasets
+torch
+spacy
 
