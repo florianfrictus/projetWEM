@@ -184,13 +184,13 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
                                                       & (negative_bombing_table['confidence'] == confident)]
             try:
                 st.subheader('Positive Review Bombing Example')
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                with col1:
-                    comm_num = st.number_input('Comment number', min_value=0,
+                # col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                #with col1:
+                comm_num = st.slider('Comment number', min_value=0,
                                                max_value=len(positive_bombing) - 1,
                                                value=0, step=1)
-                with col2:
-                    st.text_input('Username', positive_bombing.iloc[comm_num]['username'])
+                # with col2:
+                #     st.text_input('Username', positive_bombing.iloc[comm_num]['username'])
                 comm = positive_bombing.iloc[comm_num]['comment']
                 st.markdown(comm)
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
@@ -203,13 +203,13 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
                 st.markdown('No positive comment considered as Review Bombing')
             try:
                 st.subheader('Negative Review Bombing Example')
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                with col1:
-                    comm_num = st.number_input('Comment number', min_value=0,
+                # col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                # with col1:
+                comm_num = st.slider('Comment number', min_value=0,
                                                max_value=len(negative_bombing) - 1,
                                                value=0, step=1)
-                with col2:
-                    st.text_input('Username', negative_bombing.iloc[comm_num]['username'])
+                # with col2:
+                #     st.text_input('Username', negative_bombing.iloc[comm_num]['username'])
                 comm = negative_bombing.iloc[comm_num]['comment']
                 st.markdown(comm)
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
