@@ -155,9 +155,11 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
         st.plotly_chart(fig_byday, use_container_width=True)
 
         french_stopwords = set(stopwords.words('french'))
-        french_stopwords = french_stopwords.union([',', ':', '.', '(', ')', '-', '!', ';', '\'', '...'])
+        french_stopwords = french_stopwords.union([',', ':', '.', '(', ')', '-', '!', ';', '\'', '...','--','"','``','`','\'\''])
         fdist = FreqDist(w.lower() for comment in df_comments['comment']
                          for w in word_tokenize(comment) if w not in french_stopwords and len(w) > 1)
+
+    
         most_common_words = pd.DataFrame(fdist.most_common(25), columns=['Word', 'Count'])
 
         fig_most_common = px.bar(most_common_words, x='Word', y='Count')
