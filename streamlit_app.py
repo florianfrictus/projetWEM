@@ -12,8 +12,15 @@ import plotly.figure_factory as ff
 
 from sklearn.metrics import confusion_matrix, accuracy_score
 
-DEFAULT_GAME = 'Elden Ring'
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
+def load_model():
+    tokenizer = AutoTokenizer.from_pretrained('camembert-base')
+    model = AutoModelForSequenceClassification.from_pretrained('./data/4_camembert')
+    classifier = pipeline(task="text-classification",model=model,tokenizer=tokenizer)
+    return classifier
+
+DEFAULT_GAME = 'Elden Ring'
 
 def main_page(df):
     st.title('Global statistics')
@@ -228,10 +235,12 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
         st.subheader("No comments")
 
 
+
 def comment_page(df, positive_bombing_table, negative_bombing_table):
 
     with st.sidebar:
         model = st.selectbox('Select model',('SVM_TFIDF','SVM_W2V','CAMEMBERT','DTC_TFIDF','DTC_W2V','NB_TFIDF'))
+        predict_grade = st.checkbox('Activate grade prediction with text')
 
     confidences = ['LOW','MEDIUM','HIGH']
     data_positive_bombing = {}
@@ -290,13 +299,20 @@ def comment_page(df, positive_bombing_table, negative_bombing_table):
         st.subheader(f"Accuracy for 21 classes {accuracy_score(model_21['y_true'], model_21['y_pred'])*100:.2f}%")
         st.plotly_chart(fig_model_21, use_container_width=True)
     
-
-
+    if predict_grade:
+        st.header("Predict grade with text")
+        st.markdown("This prediction only uses the `CAMEMBERT` model. The grades are attributed in 4 different classes range. Score gives the probability (confidence) of the model for the class.")
+        st.text_area('Text to analyze', height=200, key='txt')
+        if st.button('Predict grade'):
+            classifier = load_model()
+            tokenizer_kwargs = {'padding':True,'truncation':True,'max_length':512}
+            grade = classifier([st.session_state.txt], **tokenizer_kwargs)
+            dict_grade_convert = {"LABEL_0":'0-4',"LABEL_1":'5-9',"LABEL_2":'10-14',"LABEL_3":'15-20'}
+            st.markdown(f"Grade {dict_grade_convert[grade[0]['label']]} (score={grade[0]['score']*100:.2f}%)")
 @st.cache()
 def load_data():
     df = get_data('data/dataset500.csv')
     return df
-
 
 @st.cache(allow_output_mutation=True)
 def load_review_bombing():
