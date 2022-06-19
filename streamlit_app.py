@@ -194,10 +194,10 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
                 comm = positive_bombing.iloc[comm_num]['comment']
                 st.markdown(comm)
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                with col1:
-                    if st.button('Not Positive Bombing'):
-                        positive_bombing_table.iloc[positive_bombing.index[comm_num]]['confidence'] = None
-                        positive_bombing_table.to_csv('data/positive_bombing.csv')
+                # with col1:
+                #     if st.button('Not Positive Bombing'):
+                #         positive_bombing_table.iloc[positive_bombing.index[comm_num]]['confidence'] = None
+                #         positive_bombing_table.to_csv('data/positive_bombing.csv')
 
             except:
                 st.markdown('No positive comment considered as Review Bombing')
@@ -213,18 +213,39 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
                 comm = negative_bombing.iloc[comm_num]['comment']
                 st.markdown(comm)
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-                with col1:
-                    if st.button('Not Negative Bombing'):
-                        negative_bombing_table.iloc[negative_bombing.index[comm_num]]['confidence'] = None
-                        negative_bombing_table.to_csv('data/negative_bombing.csv')
+                # with col1:
+                #     if st.button('Not Negative Bombing'):
+                #         negative_bombing_table.iloc[negative_bombing.index[comm_num]]['confidence'] = None
+                #         negative_bombing_table.to_csv('data/negative_bombing.csv')
             except:
                 st.markdown('No negative comment considered as Review Bombing')
     else:
         st.subheader("No comments")
 
 
-def comment_page(df):
-    pass
+def comment_page(df, positive_bombing_table, negative_bombing_table):
+    confidences = ['LOW','MEDIUM','HIGH']
+    data_positive_bombing = {}
+    data_negative_bombing = {}
+    for confidence in confidences:
+        positive_bombing = positive_bombing_table[(positive_bombing_table['confidence'] == confidence)]
+        negative_bombing = negative_bombing_table[(negative_bombing_table['confidence'] == confidence)]
+
+        data_positive_bombing[confidence]=len(positive_bombing)
+        data_negative_bombing[confidence]=len(negative_bombing)
+    
+
+    data_positive_fig = list(data_positive_bombing.values())
+    data_negative_fig = list(data_negative_bombing.values())
+    fig_bombing = go.Figure()
+    fig_bombing.add_trace(go.Histogram(histfunc="sum",y=data_positive_fig, x=confidences, name="positive"))
+    fig_bombing.add_trace(go.Histogram(histfunc="sum",y=data_negative_fig, x=confidences, name="negative"))
+
+    st.title('Text analysis statistics')
+    st.header("Bombing review count")
+    st.plotly_chart(fig_bombing, use_container_width=True)
+    n_comments = sum([len(comments) for comments in df['comments']])
+    st.markdown(f"There's a total of {n_comments} comments. Meaning our model detected: {data_positive_bombing['LOW']/n_comments*100:.2f}% (stats for `LOW`, {data_positive_bombing['MEDIUM']/n_comments*100:.2f}% for `MEDIUM`, {data_positive_bombing['HIGH']/n_comments*100:.2f}% for `HIGH`) of the comments as positive bombing and {data_negative_bombing['LOW']/n_comments*100:.2f}% (stats for `LOW`, {data_negative_bombing['MEDIUM']/n_comments*100:.2f}% for `MEDIUM`, {data_negative_bombing['HIGH']/n_comments*100:.2f}% for `HIGH`) as negative bombing.")
 
 
 @st.cache()
@@ -255,4 +276,4 @@ if __name__ == "__main__":
     elif page_selected == 'Game':
         game_page(df, positive_bombing_table, negative_bombing_table)
     elif page_selected == 'Comments':
-        comment_page(df)
+        comment_page(df, positive_bombing_table, negative_bombing_table)
