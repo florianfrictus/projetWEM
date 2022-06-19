@@ -15,6 +15,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 import nltk
 nltk.download('stopwords')
+nltk.download('punkt')
 
 def load_model():
     tokenizer = AutoTokenizer.from_pretrained('camembert-base')
