@@ -8,6 +8,9 @@ from nltk.corpus import stopwords
 
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.figure_factory as ff
+
+from sklearn.metrics import confusion_matrix, accuracy_score
 
 DEFAULT_GAME = 'Elden Ring'
 
@@ -226,6 +229,10 @@ def game_page(df, positive_bombing_table, negative_bombing_table):
 
 
 def comment_page(df, positive_bombing_table, negative_bombing_table):
+
+    with st.sidebar:
+        model = st.selectbox('Select model',('SVM_TFIDF','SVM_W2V','CAMEMBERT','DTC_TFIDF','DTC_W2V','NB_TFIDF'))
+
     confidences = ['LOW','MEDIUM','HIGH']
     data_positive_bombing = {}
     data_negative_bombing = {}
@@ -250,6 +257,41 @@ def comment_page(df, positive_bombing_table, negative_bombing_table):
     st.markdown(f"There's a total of {n_comments} comments. Meaning our model detected: {data_positive_bombing['LOW']/n_comments*100:.2f}% (stats for `LOW`, {data_positive_bombing['MEDIUM']/n_comments*100:.2f}% for `MEDIUM`, {data_positive_bombing['HIGH']/n_comments*100:.2f}% for `HIGH`) of the comments as positive bombing and {data_negative_bombing['LOW']/n_comments*100:.2f}% (stats for `LOW`, {data_negative_bombing['MEDIUM']/n_comments*100:.2f}% for `MEDIUM`, {data_negative_bombing['HIGH']/n_comments*100:.2f}% for `HIGH`) as negative bombing.")
 
 
+    st.header("Grade predict")
+
+    labels_2 = ['0-9','10-20']
+    labels_4 = ['0-4','5-9','10-14','15-20']
+    labels_21 = list(str(i) for i in range(21))
+
+    model_2,model_4,model_21 = load_grade_results(model)
+
+    cm_model_2 = confusion_matrix(model_2['y_true'], model_2['y_pred'])[::-1]
+    cm_model_4 = confusion_matrix(model_4['y_true'], model_4['y_pred'])[::-1]
+    cm_model_21 = confusion_matrix(model_21['y_true'], model_21['y_pred'])
+
+    fig_model_2 = ff.create_annotated_heatmap(cm_model_2, x=labels_2,y=labels_2[::-1], colorscale='RdBu', showscale = True)
+    fig_model_2.update_layout(xaxis_title='Predicted grade',yaxis_title='True grade')
+    fig_model_4 = ff.create_annotated_heatmap(cm_model_4, x=labels_4,y=labels_4[::-1], colorscale='RdBu', showscale = True)
+    fig_model_4.update_layout(xaxis_title='Predicted grade',yaxis_title='True grade')
+
+    # fig_svm_21 = ConfusionMatrixDisplay(confusion_matrix=cm_svm_21, display_labels=labels_21)
+    fig_model_21 = px.imshow(cm_model_21, x=labels_21,y=labels_21,color_continuous_scale='RdBu')
+    fig_model_21.update_layout(xaxis_title='Predicted grade',yaxis_title='True grade')
+
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.subheader(f"Accuracy for 2 classes {accuracy_score(model_2['y_true'], model_2['y_pred'])*100:.2f}%")
+        st.plotly_chart(fig_model_2, use_container_width=True)
+    with col2:
+        st.subheader(f"Accuracy for 4 classes {accuracy_score(model_4['y_true'], model_4['y_pred'])*100:.2f}%")
+        st.plotly_chart(fig_model_4, use_container_width=True)
+    with col3:
+        st.subheader(f"Accuracy for 21 classes {accuracy_score(model_21['y_true'], model_21['y_pred'])*100:.2f}%")
+        st.plotly_chart(fig_model_21, use_container_width=True)
+    
+
+
 @st.cache()
 def load_data():
     df = get_data('data/dataset500.csv')
@@ -262,6 +304,13 @@ def load_review_bombing():
     neg = pd.read_csv('data/negative_bombing.csv')
     return pos, neg
 
+@st.cache()
+def load_grade_results(model):
+    model_2 = pd.read_csv(f"data/2_{model}.csv", usecols=['y_pred','y_true'])
+    model_4 = pd.read_csv(f"data/4_{model}.csv", usecols=['y_pred','y_true'])
+    model_21 = pd.read_csv(f"data/21_{model}.csv", usecols=['y_pred','y_true'])
+
+    return (model_2,model_4,model_21)
 
 if __name__ == "__main__":
     st.set_page_config(page_title='JVC analytics', layout='wide')

@@ -1,7 +1,5 @@
 elasticsearch
 elasticsearch-dsl
-scrapy
-scrapy-splash
 selenium
 bs4
 webdriver_manager
@@ -17,3 +15,5 @@ textblob
 textblob_fr
 plotly
 vaderSentiment_fr
+scikit-learn
+matplotlib
