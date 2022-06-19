@@ -1,7 +1,5 @@
 elasticsearch
 elasticsearch-dsl
-scrapy
-scrapy-splash
 selenium
 bs4
 webdriver_manager
@@ -9,7 +7,4 @@ pandas
 numpy
 streamlit
 streamlit-aggrid
-scikit-learn
-tqdm
-spacy
-plotly
+
