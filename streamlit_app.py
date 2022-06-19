@@ -13,6 +13,8 @@ import plotly.figure_factory as ff
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+import nltk
+nltk.download('stopwords')
 
 def load_model():
     tokenizer = AutoTokenizer.from_pretrained('camembert-base')

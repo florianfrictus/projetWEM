@@ -1,5 +1,8 @@
 # ProjetWEM JVC
 
+
+The website can be found at this link : http://p1.feuillade.ch:8502/
+
 Create virtual environment
 ```
 python -m venv venv
